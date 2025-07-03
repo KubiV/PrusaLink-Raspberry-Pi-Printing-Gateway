@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8" />
+    <title>PrusaLink Raspberry Pi Gateway</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 2em;
+            background-color: #f5f5f5;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+        }
+        .btn {
+            display: inline-block;
+            padding: 1em 2em;
+            margin: 1em;
+            font-size: 1.2em;
+            color: white;
+            background-color: #0078d7;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background-color 0.3s ease;
+        }
+        .btn:hover {
+            background-color: #005a9e;
+        }
+    </style>
+</head>
+<body>
+    <h1>PrusaLink Gateway - Výběr tiskárny</h1>
+    <a href="http://192.168.2.11:9091" class="btn" target="_blank">Tiskárna 1</a>
+    <a href="http://192.168.2.12:9092" class="btn" target="_blank">Tiskárna 2</a>
+</body>
+</html>
