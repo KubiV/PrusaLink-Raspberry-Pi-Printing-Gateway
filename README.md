@@ -21,6 +21,16 @@ Umožňuje bezpečný přístup k tiskárnám např. přes VPN a správu tiskár
 - Podpora více tiskáren v rámci jedné brány.
 - Jednoduchá konfigurace a automatizace instalace pomocí instalačního skriptu.
 
+## Hardware
+
+- Raspberry Pi + chlazení, box
+- SD karta (nebo jiný disk, např. HAT s nvme diskem)
+- Zdroj (nebo HAT s podporou PoE)
+- Ethernet Switch (+ jeho zdroj)
+- USB Ethernet adaptér
+- 3D tiskárny
+- Ethernetové kabely
+
 ## Požadavky
 
 - Raspberry Pi s OS Raspberry Pi OS (Debian-based).
