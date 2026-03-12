@@ -2,38 +2,342 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8" />
-    <title>PrusaLink Raspberry Pi Gateway</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Správa tiskáren - Gateway</title>
     <style>
+        /* Základní reset a stylování stránky */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            font-family: Arial, sans-serif;
-            margin: 2em;
-            background-color: #f5f5f5;
-            text-align: center;
-        }
-        h1 {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
             color: #333;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
         }
-        .btn {
-            display: inline-block;
-            padding: 1em 2em;
-            margin: 1em;
-            font-size: 1.2em;
-            color: white;
+
+        /* Levý sloupec: Menu a kamera */
+        .sidebar {
+            width: 350px; /* Výchozí šířka */
+            min-width: 250px;
+            max-width: 800px; /* Maximální šířka při roztahování */
+            background-color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            overflow-y: auto;
+            z-index: 10;
+        }
+
+        .sidebar.hidden {
+            display: none;
+        }
+
+        /* Oddělovač pro změnu velikosti (resizer) */
+        .resizer {
+            width: 6px;
+            background-color: #dee2e6;
+            cursor: col-resize;
+            flex-shrink: 0;
+            transition: background-color 0.2s;
+            z-index: 11;
+        }
+
+        .resizer:hover, .resizer:active {
             background-color: #0078d7;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            text-decoration: none;
-            transition: background-color 0.3s ease;
         }
-        .btn:hover {
+
+        .resizer.hidden {
+            display: none;
+        }
+
+        /* Hlavičky a nadpisy v levém sloupci */
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .sidebar h1, .sidebar h2 {
+            font-size: 1.2rem;
+            color: #0078d7;
+        }
+
+        /* Stylování kamery */
+        .camera-container {
+            margin-bottom: 20px;
+        }
+        .camera-container img {
+            width: 100%;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            background-color: #000;
+        }
+
+        /* Seznam tiskáren */
+        .printer-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .printer-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+            transition: background 0.2s;
+        }
+
+        .printer-item:hover {
+            background: #e2e6ea;
+        }
+
+        /* Checkbox a popisek */
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            flex-grow: 1;
+            font-weight: 600;
+        }
+
+        .checkbox-label input {
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
+        }
+
+        /* Tlačítka pro novou kartu a menu */
+        .btn-small {
+            text-decoration: none;
+            color: #fff;
+            background-color: #6c757d;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            border: none;
+            cursor: pointer;
+            transition: background 0.3s;
+            white-space: nowrap;
+        }
+
+        .btn-small:hover {
+            background-color: #5a6268;
+        }
+
+        .btn-primary {
+            background-color: #0078d7;
+            font-size: 1rem;
+            padding: 8px 15px;
+            margin-bottom: 20px;
+            align-self: flex-start;
+        }
+
+        .btn-primary:hover {
             background-color: #005a9e;
         }
+
+        /* Pravý sloupec: Zobrazení Iframe */
+        .main-content {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            background-color: #f0f2f5;
+        }
+
+        /* Hlavička okna tiskárny */
+        .iframe-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .iframe-wrapper {
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .iframe-wrapper h3 {
+            color: #495057;
+            font-size: 1.1rem;
+        }
+
+        iframe {
+            width: 100%;
+            height: 750px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+
+        /* Uvítací zpráva */
+        .empty-state {
+            text-align: center;
+            color: #6c757d;
+            margin-top: 15%;
+        }
+
     </style>
 </head>
 <body>
-    <h1>PrusaLink Gateway - Výběr tiskárny</h1>
-    <a href="http://192.168.2.11:9091" class="btn" target="_blank">Tiskárna 1</a>
-    <a href="http://192.168.2.12:9092" class="btn" target="_blank">Tiskárna 2</a>
+
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h1>Kamera</h1>
+            <a href="http://printer-gateway.local:8081/?action=stream" target="_blank" class="btn-small">↗ Karta</a>
+        </div>
+        <div class="camera-container">
+            <img src="http://printer-gateway.local:8081/?action=stream" alt="Živý přenos z kamery" />
+        </div>
+
+        <h2 style="margin-top: 10px;">Výběr tiskárny</h2>
+        <ul class="printer-list" id="printer-list">
+            </ul>
+    </div>
+
+    <div class="resizer" id="resizer"></div>
+
+    <div class="main-content" id="main-content">
+        <button id="toggle-sidebar" class="btn-small btn-primary">☰ Skrýt / Zobrazit panel</button>
+
+        <div class="empty-state" id="empty-state">
+            <h2>Vyberte tiskárnu ze seznamu</h2>
+            <p>Zaškrtnutím políčka zobrazíte rozhraní tiskárny zde.</p>
+        </div>
+        </div>
+
+    <script>
+        // --- DATA TISKÁREN ---
+        const printers = [
+            { id: 'mk3-5-lack', name: 'Hlavní stůl: MK3.5 Lack', url: 'http://printer-gateway.local:9091' },
+            { id: 'prusa-xl', name: 'Hlavní stůl: Prusa XL', url: 'http://printer-gateway.local:9092' },
+            { id: 'mk4', name: 'Hlavní stůl: MK4', url: 'http://printer-gateway.local:9093' },
+            { id: 'mk3-5s-mmu', name: 'Hlavní stůl: MK3.5S MMU', url: 'http://printer-gateway.local:9094' },
+            { id: 'mk3-5s-kraj', name: 'Na kraji: MK3.5S Kraj', url: 'http://printer-gateway.local:9095' },
+            { id: 'prusa-mini', name: 'Na kraji: Prusa Mini', url: 'http://printer-gateway.local:9096' }
+        ];
+
+        // --- ELEMENTY ---
+        const printerListElement = document.getElementById('printer-list');
+        const mainContent = document.getElementById('main-content');
+        const emptyState = document.getElementById('empty-state');
+        const sidebar = document.getElementById('sidebar');
+        const resizer = document.getElementById('resizer');
+        const toggleBtn = document.getElementById('toggle-sidebar');
+
+        // --- VYKRESLENÍ MENU ---
+        function renderMenu() {
+            printers.forEach((printer) => {
+                const li = document.createElement('li');
+                li.className = 'printer-item';
+
+                // Tlačítko na novou kartu je zpět v seznamu
+                li.innerHTML = `
+                    <label class="checkbox-label">
+                        <input type="checkbox" class="printer-checkbox" value="${printer.id}">
+                        ${printer.name}
+                    </label>
+                    <a href="${printer.url}" target="_blank" class="btn-small" title="Otevřít na nové kartě">↗ Karta</a>
+                `;
+                printerListElement.appendChild(li);
+            });
+
+            const checkboxes = document.querySelectorAll('.printer-checkbox');
+            checkboxes.forEach(cb => {
+                cb.addEventListener('change', updateIframes);
+            });
+        }
+
+        // --- AKTUALIZACE IFRAMŮ ---
+        function updateIframes() {
+            const checkedBoxes = Array.from(document.querySelectorAll('.printer-checkbox:checked'))
+                                      .map(cb => cb.value);
+
+            emptyState.style.display = checkedBoxes.length === 0 ? 'block' : 'none';
+
+            // Smazání odškrtnutých
+            const existingWrappers = document.querySelectorAll('.iframe-wrapper');
+            existingWrappers.forEach(wrapper => {
+                if (!checkedBoxes.includes(wrapper.dataset.id)) {
+                    wrapper.remove();
+                }
+            });
+
+            // Přidání nově zaškrtnutých
+            checkedBoxes.forEach(id => {
+                const exists = document.querySelector(`.iframe-wrapper[data-id="${id}"]`);
+                
+                if (!exists) {
+                    const printer = printers.find(p => p.id === id);
+                    if (printer) {
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'iframe-wrapper';
+                        wrapper.dataset.id = printer.id;
+
+                        wrapper.innerHTML = `
+                            <div class="iframe-header">
+                                <h3>${printer.name} (${printer.url})</h3>
+                                <a href="${printer.url}" target="_blank" class="btn-small">↗ Otevřít na nové kartě</a>
+                            </div>
+                            <iframe src="${printer.url}"></iframe>
+                        `;
+                        mainContent.appendChild(wrapper);
+                    }
+                }
+            });
+        }
+
+        // --- ROZTAHOVÁNÍ SLOUPCŮ (RESIZER) ---
+        let isResizing = false;
+
+        resizer.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            document.body.style.cursor = 'col-resize';
+            // Zabráníme označování textu při tažení
+            e.preventDefault(); 
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            
+            // Nová šířka podle pozice myši
+            let newWidth = e.clientX;
+            
+            // Omezení, aby panel nebyl moc malý nebo moc velký
+            if (newWidth < 250) newWidth = 250;
+            if (newWidth > window.innerWidth - 300) newWidth = window.innerWidth - 300;
+            
+            sidebar.style.width = newWidth + 'px';
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                document.body.style.cursor = 'default';
+            }
+        });
+
+        // --- SKRÝVÁNÍ / ZOBRAZOVÁNÍ MENU ---
+        toggleBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('hidden');
+            resizer.classList.toggle('hidden');
+        });
+
+        // --- INICIALIZACE ---
+        renderMenu();
+    </script>
+
 </body>
 </html>
