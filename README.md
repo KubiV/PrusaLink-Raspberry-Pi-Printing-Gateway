@@ -5,6 +5,8 @@ Umožňuje bezpečný přístup k tiskárnám např. přes VPN a správu tiskár
 
 ![Jak vypadá toto řešení](images/printers.jpeg)
 
+![Jak vypadá UI](images/indexhtml.png)
+
 ## Přehled
 
 - Raspberry Pi slouží jako síťový router a DHCP server pro lokální síť tiskáren.
